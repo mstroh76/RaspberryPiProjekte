@@ -1,0 +1,4 @@
+#!/bin/bash
+i2cget -y 1 0x51 0x0A
+i2cget -y 1 0x51 0x0C |  tr -d '\n' &&  i2cget -y 1 0x51 0x0D | cut -b 3-5 
+

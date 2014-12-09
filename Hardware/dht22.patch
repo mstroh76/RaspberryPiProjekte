@@ -1,0 +1,54 @@
+--- dht22_old.c	2014-06-21 13:41:32.592062409 +0200
++++ dht22.c	2014-06-21 14:01:16.523714676 +0200
+@@ -16,7 +16,7 @@
+ #include "locking.h"
+ 
+ #define MAXTIMINGS 85
+-static int DHTPIN = 7;
++static int DHTPIN = 1; // GPIO18
+ static int dht22_dat[5] = {0,0,0,0,0};
+ 
+ static uint8_t sizecvt(const int read)
+@@ -81,13 +81,20 @@
+   if ((j >= 40) && 
+       (dht22_dat[4] == ((dht22_dat[0] + dht22_dat[1] + dht22_dat[2] + dht22_dat[3]) & 0xFF)) ) {
+         float t, h;
+-        h = (float)dht22_dat[0] * 256 + (float)dht22_dat[1];
+-        h /= 10;
+-        t = (float)(dht22_dat[2] & 0x7F)* 256 + (float)dht22_dat[3];
+-        t /= 10.0;
+-        if ((dht22_dat[2] & 0x80) != 0)  t *= -1;
+-
+-
++	if (dht22_dat[0] <=3) {
++	  // Calculation DHT22/AM2302
++          h = (float)dht22_dat[0] * 256 + (float)dht22_dat[1];
++   	  h /= 10;
++       	  t = (float)(dht22_dat[2] & 0x7F)* 256 + (float)dht22_dat[3];
++       	  t /= 10.0;
++       	  if ((dht22_dat[2] & 0x80) != 0)  t *= -1;
++	} else {
++	  // Calculation DHT11
++	  h = dht22_dat[0] * 10 + dht22_dat[1];
++	  h /= 10.0f;
++	  t = dht22_dat[2] * 10 + dht22_dat[3];
++	  t /= 10.0f;
++	}
+     printf("Humidity = %.2f %% Temperature = %.2f *C \n", h, t );
+     return 1;
+   }
+@@ -103,12 +110,12 @@
+   int lockfd;
+ 
+   if (argc != 2)
+-    printf ("usage: %s <pin>\ndescription: pin is the wiringPi pin number\nusing 7 (GPIO 4)\n",argv[0]);
++    printf ("usage: %s <pin>\ndescription: pin is the wiringPi pin number\nusing %d\n",argv[0],DHTPIN);
+   else
+     DHTPIN = atoi(argv[1]);
+    
+ 
+-  printf ("Raspberry Pi wiringPi DHT22 reader\nwww.lolware.net\n") ;
++  printf ("Raspberry Pi wiringPi DHT11/22 reader\nwww.lolware.net\n") ;
+ 
+   lockfd = open_lockfile(LOCKFILE);
+ 
