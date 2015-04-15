@@ -1,3 +1,6 @@
+//
+//    Simple program to test RDM630 RFID reader
+//
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -5,6 +8,7 @@
 #include <termios.h>
 #include <signal.h>
 #include <errno.h>
+#include <unistd.h>
 
 static sig_atomic_t end = 0;
 const int cnTagIDSize = 10;
@@ -14,21 +18,26 @@ static void sighandler(int signo) {
   end = 1;
 }
 
-int IsChecksumOK(unsigned char* TagID, unsigned char* Checksum){
-	unsigned char ChecksumValue;
-	unsigned char ChecksumCalc;
-	unsigned char szHex[2+1];
-	unsigned char TagValue[cnTagIDSizeByte];
+unsigned char Get2HexValue(const char* szAscii) {
+	char szHex[2+1];
+	unsigned int nHex;	
+
+	szHex[2] = '0';
+	strncpy(szHex, szAscii, 2);
+	sscanf(szHex, "%X", &nHex); //two ascii char to hex value
+	return((unsigned char) nHex);
+}
+
+int IsChecksumOK(const char* TagID, const char* Checksum){
+	char ChecksumValue;
+	char ChecksumCalc;
 	int count;
 
 	ChecksumCalc = 0;
 	for (count=0; count<cnTagIDSizeByte; count++) {
-		strncpy(szHex, &TagID[count*2], 2);
-		sscanf(szHex, "%X", &TagValue[count]); //two char to hex value
-		ChecksumCalc ^= TagValue[count]; //calc checksum as exor
+		ChecksumCalc ^= Get2HexValue(&TagID[count*2]); //calc checksum as exor
 	}
-	strncpy(szHex, Checksum, 2);
-	sscanf(szHex, "%X", &ChecksumValue); //two char to hex value
+	ChecksumValue = Get2HexValue(Checksum);
 
 	if (ChecksumCalc == ChecksumValue) { // compare checksum calc and transmitted
 		return 1;
@@ -41,14 +50,14 @@ int main(int argc, char** argv) {
 	struct termios tio;
 	int tty_fd;
 	struct sigaction sa;
-	unsigned char c;
-	unsigned char TagID[cnTagIDSize+1];
- 	unsigned char TagIDOld[cnTagIDSize+1];
-	unsigned char Checksum[2];
+	char cRS232Sign;
+	char TagID[cnTagIDSize+1];
+ 	char TagIDOld[cnTagIDSize+1];
+	char Checksum[2];
 	int	nPos;
-	fd_set readfs;    /* file descriptor set */
-	int maxfd;     /* maximum file desciptor in file descriptor set*/
-	struct timeval timeout; /* timeout for wait of rs232 input */
+	fd_set readfs; // file descriptor set
+	int maxfd;     // maximum file desciptor in file descriptor set
+	struct timeval timeout; // timeout for wait of rs232 input
 	int select_result;
 
 	memset(&sa, 0, sizeof(struct sigaction));
@@ -64,13 +73,16 @@ int main(int argc, char** argv) {
 	tio.c_oflag = 0;
 	//CS8 = 8 bit data.
 	//CREAD = Enable receiver.
-	tio.c_cflag = CS8|CREAD|CLOCAL;           // 8N1, see termios.h for more information
+	tio.c_cflag = CS8|CREAD|CLOCAL; // 8N1, see termios.h for more information
 	tio.c_lflag = 0;
 	tio.c_cc[VMIN] = 1;
 	tio.c_cc[VTIME] = 5;
 
-	printf("Open device /dev/ttyAMA 9600, 8o1\n");
-	tty_fd = open("/dev/ttyAMA0", O_RDWR | O_NONBLOCK);
+	const char cszRS232Device = "/dev/ttyAMA0";
+	//const char cszRS232Device[] = "/dev/ttyUSB0";
+
+	printf("Open device '%s' 9600, 8n1\n", cszRS232Device);
+	tty_fd = open(cszRS232Device, O_RDWR | O_NONBLOCK);
 	if (-1 == tty_fd) {
 		printf("unable to open device, error '%s' (%d)\n", strerror(errno), errno);
 		return EXIT_FAILURE;
@@ -107,33 +119,34 @@ int main(int argc, char** argv) {
 			}
 		} else {
 			if (FD_ISSET(tty_fd, &readfs)) {
-				read(tty_fd, &c, 1);
-				if (c == 2) { // STX - Start
-					nPos = 0;
-					TagID[nPos] = '\0';
-				} else if (c == 3) { // ETX - Ende
-					if (IsChecksumOK(TagID, Checksum)) {
-						if (strcmp(TagIDOld, TagID)) {
-							printf("TagID %s found\n", TagID);
-							strcpy(TagIDOld, TagID);
+				while (read(tty_fd, &cRS232Sign, 1)>0) {
+					if (cRS232Sign == 2) { // STX - Start
+						nPos = 0;
+						TagID[nPos] = '\0';
+					} else if (cRS232Sign == 3) { // ETX - Ende
+						if (IsChecksumOK(TagID, Checksum)) {
+							if (strcmp(TagIDOld, TagID)) {
+								printf("TagID %s found\n", TagID);
+								strcpy(TagIDOld, TagID);
+							}
+						} else {
+							printf("TagID = %s, Checksum error!\n", TagID);
 						}
-					} else {
-						printf("TagID = %s, Checksum error!\n", TagID);
+					} else { //char received
+						if (nPos<cnTagIDSize) {
+							TagID[nPos] = cRS232Sign;
+							TagID[nPos+1] = '\0';
+						} else if (nPos<12) {
+							Checksum[nPos-cnTagIDSize] = cRS232Sign;
+						}
+						nPos++;
 					}
-				} else { //char received
-					if (nPos<cnTagIDSize) {
-						TagID[nPos] = c;
-						TagID[nPos+1] = '\0';
-					} else if (nPos<12) {
-						Checksum[nPos-cnTagIDSize] = c;
-					}
-					nPos++;
 				}
 			}
 		}
 	} while (!end);
 
-	printf("Close device /dev/ttyAMA\n");
+	printf("Close device '%s'\n", cszRS232Device);
 	close(tty_fd);
 
 	return EXIT_SUCCESS;
