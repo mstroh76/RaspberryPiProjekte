@@ -1,6 +1,6 @@
 //
-//      Simple program to test RS232 functions 
-//		
+//    Simple program to test RS232 functions
+//
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,13 +10,14 @@
 #include <signal.h>
 #include <errno.h>
 
+
 static sig_atomic_t end = 0;
 
 static void sighandler(int signo) {
   end = 1;
 }
 
-int main(int argc,char** argv) {
+int main(int argc, char** argv) {
 	struct termios tio;
 	int tty_fd;
 	struct sigaction sa;
@@ -31,8 +32,8 @@ int main(int argc,char** argv) {
 	printf("RS232 echo program\n\n");
 
 	memset(&tio, 0, sizeof(tio));
-	tio.c_iflag=0;
-	tio.c_oflag=0;
+	tio.c_iflag = 0;
+	tio.c_oflag = 0;
 	//CS8 = 8 bit data.
 	//CREAD = Enable receiver.
 	//CLOCAL = Ignore modem status lines.
@@ -56,11 +57,13 @@ int main(int argc,char** argv) {
 		if (read(tty_fd, &c, 1) > 0) { // read from rs232
 			// if new data is available on the serial port send it back
 			write(STDOUT_FILENO, &c, 1);              
-			if(c != 'q') {
+			if (c != 'q') {
 				write(tty_fd, &c, 1); // write to rs232
 			} else {
 				write(tty_fd, "\nquit\n", 6); // write to rs232
 			}
+		} else {
+			usleep(10000);
 		}
 	} while (c!='q' && !end);
 

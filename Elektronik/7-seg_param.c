@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 
@@ -35,11 +36,12 @@ int main(int argc, char* argv[]) {
 	//Adresses of MCP IC
 	const int SlaveAddr     = 0x27;
 	const int MCP_PortA     = 0x00;
-	const int MCP_PortB     = 0x10;
-	const int MCP_Direction = 0x00;
-	const int MCP_PullUp    = 0x06;
-	const int MCP_Read      = 0x09;
-	const int MCP_Write     = 0x0A;
+	const int MCP_PortB     = 0x10; //IOCON.Bank 1
+	const int MCP_Direction = 0x00; 
+	const int MCP_PullUp    = 0x06; //IOCON.Bank 1
+	const int MCP_Read      = 0x09; //IOCON.Bank 1
+	const int MCP_Write     = 0x0A; //IOCON.Bank 1
+	const int MCP_IOCON     = 0x0A; //IOCON.Bank 0
 
 	//Define Output pin to segment of display
 	//(this has to match with wiring)
@@ -98,6 +100,8 @@ int main(int argc, char* argv[]) {
 		close(fd);
 		exit(3);
 	}
+	printf("switch to iocon.bank 1 ...\n");
+	I2CWrite(fd, MCP_IOCON, 0x80);
 	printf("write direction output ...\n");
 	I2CWrite(fd, MCP_PortA | MCP_Direction, 0x00);
 	printf("write output 0xFF ...\n");

@@ -25,7 +25,7 @@ int I2CWrite(int fd, unsigned char Register, unsigned char Value) {
 	unsigned char buf[2];
 
 	buf[0] = Register;
-	buf[1] = Value ;
+	buf[1] = Value;
 	if (write(fd, buf, 2) != 2) {
 		fprintf(stderr, 
 		"Failed to write to the i2c bus (%s)\n", strerror(errno));
@@ -35,12 +35,12 @@ int I2CWrite(int fd, unsigned char Register, unsigned char Value) {
 }
 
 int I2CRead(int fd, unsigned char Register, unsigned char* Value) {
-	unsigned char Value1=0;
+	unsigned char Value1 = 0;
 	if (write(fd, &Register, 1) != 1) {
-                fprintf(stderr,
-                "Failed to write to the i2c bus (%s)\n", strerror(errno));
-                return false;
-        }
+		fprintf(stderr,
+		"Failed to write to the i2c bus (%s)\n", strerror(errno));
+		return false;
+	}
 
 	if (read(fd, &Value1, 1) != 1) {
 		fprintf(stderr, 
@@ -56,13 +56,14 @@ int main(void) {
 	int fd;
 	char device[20];
 	//Adresses of MCP IC
-	const int SlaveAddr       = 0x27;
-	const int MCP_PortA       = 0x00;
-	const int MCP_PortB       = 0x10;
-	const int MCP_Direction   = 0x00;
-	const int MCP_PullUp      = 0x06;
-	const int MCP_Read        = 0x09;
-	const int MCP_Write       = 0x0A;
+	const int SlaveAddr     = 0x27;
+	const int MCP_PortA     = 0x00;
+	const int MCP_PortB     = 0x10; //IOCON.Bank 1
+	const int MCP_Direction = 0x00; 
+	const int MCP_PullUp    = 0x06; //IOCON.Bank 1
+	const int MCP_Read      = 0x09; //IOCON.Bank 1
+	const int MCP_Write     = 0x0A; //IOCON.Bank 1
+	const int MCP_IOCON     = 0x0A; //IOCON.Bank 0
 	
 	//Define Output pin to segment of display
 	//(this has to match with wiring)	
@@ -110,6 +111,8 @@ int main(void) {
 		exit(2);
 	}
 	
+	printf("switch to iocon.bank 1 ...\n");
+	I2CWrite(fd, MCP_IOCON, 0x80);	
 	printf("write portA direction output ...\n");
 	I2CWrite(fd, MCP_PortA | MCP_Direction, 0x00);
 	printf("write portB direction input 1-7, output 8 ...\n");

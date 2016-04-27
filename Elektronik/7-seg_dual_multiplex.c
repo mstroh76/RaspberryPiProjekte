@@ -13,13 +13,14 @@
 #include <linux/i2c-dev.h>
 
 static sig_atomic_t end = 0;
-const int SlaveAddr       = 0x23;
-const int MCP_PortA       = 0x00;
-const int MCP_PortB       = 0x10;
-const int MCP_Direction   = 0x00;
-const int MCP_PullUp      = 0x06;
-const int MCP_Read        = 0x09;
-const int MCP_Write       = 0x0A;
+const int SlaveAddr     = 0x23;
+const int MCP_PortA     = 0x00;
+const int MCP_PortB     = 0x10; //IOCON.Bank 1
+const int MCP_Direction = 0x00; 
+const int MCP_PullUp    = 0x06; //IOCON.Bank 1
+const int MCP_Read      = 0x09; //IOCON.Bank 1
+const int MCP_Write     = 0x0A; //IOCON.Bank 1
+const int MCP_IOCON     = 0x0A; //IOCON.Bank 0
 
 const int Seg7_Dot_Off       = 0x10;
 const int Seg7_Digi1_Off     = 0x40;
@@ -74,6 +75,8 @@ int main(void) {
 		exit(2);
 	}
 
+	printf("switch to iocon.bank 1 ...\n");
+	I2CWrite(fd, MCP_IOCON, 0x80);	
 	printf("start output dark...\n");
 	I2CWrite(fd, MCP_PortA | MCP_Write, Seg7_Digi1_Off | Seg7_Digi2_Off);
 
