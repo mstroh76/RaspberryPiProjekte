@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
 	tio.c_cc[VMIN] = 1;
 	tio.c_cc[VTIME] = 5;
 
-	const char cszRS232Device = "/dev/ttyAMA0";
+	const char cszRS232Device[] = "/dev/ttyAMA0";
 	//const char cszRS232Device[] = "/dev/ttyUSB0";
 
 	printf("Open device '%s' 9600, 8n1\n", cszRS232Device);
